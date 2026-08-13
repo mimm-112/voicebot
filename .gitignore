@@ -1,0 +1,21 @@
+# 교재 PDF (저작물 — 공개 리포지토리에 올리지 않는다)
+*.pdf
+
+# 가상 환경
+ch03_env/
+py_env/
+venv/
+
+# API 키
+.streamlit/secrets.toml
+.env
+
+# 실행 중 생성되는 음원 파일
+*.mp3
+
+# 파이썬
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
