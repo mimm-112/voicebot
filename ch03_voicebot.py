@@ -65,9 +65,11 @@ JARVIS_CSS = """
 .jv-sub { margin:6px 0 0 0 !important; font-size:.72rem !important; letter-spacing:.28em;
     color:#5FB6CC; text-transform:uppercase; }
 
-.jv-status { display:flex; gap:18px; flex-wrap:wrap; margin:10px 0 2px 0; font-size:.76rem; letter-spacing:.1em; color:#6FD2E6; }
+.jv-status { display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 2px 0; font-size:.76rem; letter-spacing:.1em; color:#6FD2E6; }
 .jv-status span { border:1px solid rgba(0,229,255,.28); border-radius:999px; padding:3px 12px; background:rgba(0,229,255,.05); }
-.jv-dot { color:#39FF88; animation: jvBlink 1.8s ease-in-out infinite; }
+.jv-status span.ok   { border-color:rgba(57,255,136,.45); background:rgba(57,255,136,.06); color:#8CFFC0; }
+.jv-status span.warn { border-color:rgba(255,201,71,.5);  background:rgba(255,201,71,.07); color:#FFC947; }
+.jv-dot { animation: jvBlink 1.8s ease-in-out infinite; }
 
 .jv-rule { height:1px; border:0; margin:14px 0 18px 0;
     background:linear-gradient(90deg, transparent, rgba(0,229,255,.65), rgba(255,170,0,.35), transparent); }
@@ -105,11 +107,21 @@ JARVIS_CSS = """
 """
 
 
-def render_header():
-    """자비스 컨셉의 제목과 상태 표시줄을 그린다."""
+def render_header(api_ok, model, turns):
+    """자비스 컨셉의 제목과 상태 표시줄을 그린다.
+
+    상태 표시줄에는 실제 세션 값(키 인증 여부, 선택한 모델, 지금까지의 대화 횟수)을
+    보여준다. 값을 인자로 받기 때문에 화면에 보이는 내용과 실제 상태가 어긋나지 않는다.
+    """
     st.markdown(JARVIS_CSS, unsafe_allow_html=True)
+
+    if api_ok:
+        auth = '<span class="ok"><span class="jv-dot">●</span> 인증 완료</span>'
+    else:
+        auth = '<span class="warn">○ 인증 키 필요</span>'
+
     st.markdown(
-        """
+        f"""
         <div class="jv-head">
             <div class="jv-reactor"></div>
             <div>
@@ -118,9 +130,9 @@ def render_header():
             </div>
         </div>
         <div class="jv-status">
-            <span><span class="jv-dot">●</span> 시스템 온라인</span>
-            <span>🎙️ 음성 입력 대기</span>
-            <span>⚡ 아크 리액터 정상</span>
+            {auth}
+            <span>🧠 {model}</span>
+            <span>💬 대화 {turns}턴</span>
         </div>
         <hr class="jv-rule">
         """,
@@ -237,30 +249,24 @@ def TTS(response):
     os.remove(filename)
 
 
+def reset_chat():
+    """대화 기록을 지우고 녹음 위젯도 비운다.
+
+    교재는 check_reset 이라는 깃발 하나로 초기화를 처리하지만, 녹음 위젯에는
+    직전 녹음이 그대로 남아 있기 때문에 다음 화면 갱신 때 같은 질문이 다시
+    처리되는 문제가 있다. 위젯 key 에 붙는 번호를 올려서 녹음 위젯 자체를
+    새로 만드는 방식으로 바꿨다.
+    """
+    st.session_state["chat"] = []
+    st.session_state["messages"] = [SYSTEM_PROMPT]
+    st.session_state["last_audio"] = None
+    st.session_state["rec_key"] += 1
+
+
 ##### 메인 함수 #####
 def main():
     # 기본 설정
     st.set_page_config(page_title="자비스OHYEAH", page_icon="🦾", layout="wide")
-
-    # 제목과 상태 표시줄
-    render_header()
-
-    # 기본 설명
-    with st.expander("⚙️ 시스템 사양", expanded=True):
-        st.markdown(
-            """
-            <div class="jv-panel">
-                <h4>System Specification</h4>
-                <ul>
-                    <li>인터페이스는 <b>스트림릿</b>으로 구축하였습니다.</li>
-                    <li>음성 인식(STT)은 구글의 <b>Gemini</b>를 활용하였습니다.</li>
-                    <li>답변 생성은 구글의 <b>Gemini</b> 모델을 활용하였습니다.</li>
-                    <li>음성 합성(TTS)은 구글의 <b>Google Translate TTS</b>를 활용하였습니다.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
     # session state 초기화
     if "chat" not in st.session_state:
@@ -272,35 +278,68 @@ def main():
     if "messages" not in st.session_state:
         st.session_state["messages"] = [SYSTEM_PROMPT]
 
-    if "check_reset" not in st.session_state:
-        st.session_state["check_reset"] = False
+    if "model" not in st.session_state:
+        st.session_state["model"] = GEMINI_MODELS[0]
+
+    # 이미 처리한 녹음인지 구분하기 위한 값
+    if "last_audio" not in st.session_state:
+        st.session_state["last_audio"] = None
+
+    # 녹음 위젯을 새로 만들기 위한 번호
+    if "rec_key" not in st.session_state:
+        st.session_state["rec_key"] = 0
+
+    # 제목과 상태 표시줄 (실제 세션 값을 그대로 표시한다)
+    render_header(
+        api_ok=bool(get_api_key()),
+        model=st.session_state["model"],
+        turns=len([c for c in st.session_state["chat"] if c[0] == "user"]),
+    )
+
+    # 기본 설명
+    with st.expander("📋 SYSTEM BRIEFING", expanded=True):
+        st.markdown(
+            """
+            <div class="jv-panel">
+                <ul>
+                    <li>인터페이스는 <b>스트림릿</b>으로 구축하였습니다.</li>
+                    <li>음성 인식(STT)은 구글의 <b>Gemini</b>를 활용하였습니다.</li>
+                    <li>답변 생성은 구글의 <b>Gemini</b> 모델을 활용하였습니다.</li>
+                    <li>음성 합성(TTS)은 구글의 <b>Google Translate TTS</b>를 활용하였습니다.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # 사이드바 생성
     with st.sidebar:
         st.markdown(JARVIS_CSS, unsafe_allow_html=True)
         st.markdown("### ⚙️ 제어판")
 
-        # Gemini API 키 입력받기
-        st.session_state["GOOGLE_API"] = st.text_input(
+        # Gemini API 키 입력받기.
+        # key 를 지정하면 입력값이 곧바로 session_state 에 들어가므로,
+        # 화면 위쪽의 상태 표시줄이 현재 입력 상태를 바로 반영할 수 있다.
+        st.text_input(
             label="🔑 인증 키",
             placeholder="Enter Your API Key",
-            value="",
             type="password",
+            key="GOOGLE_API",
         )
 
         st.markdown("---")
 
         # Gemini 모델을 선택하기 위한 라디오 버튼 생성
-        model = st.radio(label="🧠 코어 모델", options=GEMINI_MODELS)
+        model = st.radio(label="🧠 코어 모델", options=GEMINI_MODELS, key="model")
 
         st.markdown("---")
 
         # 리셋 버튼 생성
-        if st.button(label="🔄 기억 초기화", use_container_width=True):
-            # 리셋 코드
-            st.session_state["chat"] = []
-            st.session_state["messages"] = [SYSTEM_PROMPT]
-            st.session_state["check_reset"] = True
+        st.button(
+            label="🔄 기억 초기화",
+            use_container_width=True,
+            on_click=reset_chat,
+        )
 
     # 기능 구현 공간
     col1, col2 = st.columns(2)
@@ -308,30 +347,54 @@ def main():
         # 왼쪽 영역 작성
         st.subheader("🎙️ 음성 명령")
         # 음성 녹음 (스트림릿 내장 위젯 — 녹음과 재생을 함께 제공한다)
-        audio = st.audio_input("마이크를 눌러 말씀하세요, 보스")
-        if (audio is not None) and (st.session_state["check_reset"] == False):
+        audio = st.audio_input(
+            "마이크를 눌러 말씀하세요, 보스",
+            key=f"rec_{st.session_state['rec_key']}",
+        )
+
+        # 방금 새로 녹음한 것일 때만 처리한다.
+        # 이 확인이 없으면 모델을 바꾸는 등 다른 이유로 화면이 갱신될 때마다
+        # 남아 있는 녹음이 다시 처리되어 같은 질문을 반복해서 보내게 된다.
+        is_new = False
+        if audio is not None:
+            audio_id = hash(audio.getvalue())
+            is_new = audio_id != st.session_state["last_audio"]
+
+        if is_new:
             apikey = get_api_key()
             if not apikey:
                 st.error("🔑 인증 키가 없습니다, 보스. 왼쪽 제어판에 키를 입력해 주세요.")
-                st.stop()
+                is_new = False
+            else:
+                # 음원 파일에서 텍스트 추출
+                question = STT(audio, apikey)
+                st.session_state["last_audio"] = audio_id
 
-            # 음원 파일에서 텍스트 추출
-            question = STT(audio, apikey)
-
-            # 채팅을 시각화하기 위해 질문 내용 저장
-            now = datetime.now().strftime("%H:%M")
-            st.session_state["chat"] = st.session_state["chat"] + [
-                ("user", now, question)
-            ]
-            # Gemini 모델에 넣기 위해 질문 내용 저장
-            st.session_state["messages"] = st.session_state["messages"] + [
-                {"role": "user", "content": question}
-            ]
+                # 채팅을 시각화하기 위해 질문 내용 저장
+                now = datetime.now().strftime("%H:%M")
+                st.session_state["chat"] = st.session_state["chat"] + [
+                    ("user", now, question)
+                ]
+                # Gemini 모델에 넣기 위해 질문 내용 저장
+                st.session_state["messages"] = st.session_state["messages"] + [
+                    {"role": "user", "content": question}
+                ]
 
     with col2:
-        # 오른쪽 영역 작성
-        st.subheader("💬 교신 기록")
-        if (audio is not None) and (st.session_state["check_reset"] == False):
+        # 오른쪽 영역 작성 — 제목 옆에 대화 초기화 버튼을 함께 둔다.
+        head, btn = st.columns([2, 1])
+        with head:
+            st.subheader("💬 교신 기록")
+        with btn:
+            st.button(
+                label="🗑️ 대화 초기화",
+                use_container_width=True,
+                on_click=reset_chat,
+                disabled=not st.session_state["chat"],
+            )
+
+        response = None
+        if is_new:
             # Gemini에게 답변 얻기
             response = ask_gemini(st.session_state["messages"], model, get_api_key())
 
@@ -348,24 +411,23 @@ def main():
                 ("bot", now, response)
             ]
 
-            # 채팅 형식으로 시각화하기
+        # 채팅 형식으로 시각화하기.
+        # 교재는 이 부분을 녹음 처리 블록 안에 두는데, 그러면 모델을 바꾸는 등
+        # 다른 이유로 화면이 갱신될 때 대화 내용이 사라진다. 밖으로 꺼냈다.
+        if st.session_state["chat"]:
             for sender, time, message in st.session_state["chat"]:
                 render_bubble(sender, time, message)
-
-            # gTTS를 활용하여 음성 파일 생성 및 재생
-            TTS(response)
         else:
-            # 초기화 직후에는 위 블록을 건너뛰므로 여기서 플래그를 되돌린다.
-            # 교재 코드에는 check_reset을 False로 되돌리는 지점이 없어서
-            # 초기화를 한 번 누르면 이후 녹음이 영영 처리되지 않는다.
-            st.session_state["check_reset"] = False
-
             # 아직 대화가 없을 때 보여줄 안내
             st.markdown(
                 '<div class="jv-idle">🦾 대기 중입니다, 보스.<br>'
                 "왼쪽 마이크를 눌러 말을 걸어 주세요.</div>",
                 unsafe_allow_html=True,
             )
+
+        # gTTS를 활용하여 음성 파일 생성 및 재생
+        if response is not None:
+            TTS(response)
 
 
 if __name__ == "__main__":
