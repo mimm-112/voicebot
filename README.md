@@ -6,7 +6,7 @@
 ## 동작 흐름
 
 ```
-[사용자 음성 녹음]                 streamlit-audiorecorder
+[사용자 음성 녹음]                 st.audio_input (스트림릿 내장)
         │
         ▼
 [STT: 음성 → 텍스트]              Google Gemini (오디오 입력)
@@ -29,25 +29,19 @@
 | 파일 | 설명 |
 |---|---|
 | `ch03_voicebot.py` | 메인 애플리케이션 |
-| `requirements.txt` | 파이썬 패키지 목록 |
-| `packages.txt` | 시스템 패키지 (ffmpeg — pydub의 mp3 변환에 필요) |
+| `requirements.txt` | 파이썬 패키지 목록 (`streamlit`, `google-genai`, `gTTS` 3개뿐) |
 
 ## 로컬 실행 방법
 
 ```bash
-# 1. 가상 환경 생성 (파이썬 3.12 — 아래 '주의' 참고)
-python3.12 -m venv ch03_env
+python3 -m venv ch03_env
 source ch03_env/bin/activate        # Windows: ch03_env\Scripts\activate.bat
-
-# 2. 패키지 설치
 pip install -r requirements.txt
-
-# 3. 실행
 streamlit run ch03_voicebot.py
 ```
 
 브라우저에서 `http://localhost:8501` 로 접속한 뒤, 왼쪽 사이드바에 Gemini API 키를
-입력하고 `클릭하여 녹음하기` 버튼으로 질문하면 됩니다.
+입력하고 마이크 버튼으로 질문하면 됩니다.
 키는 [Google AI Studio](https://aistudio.google.com/apikey) 에서 무료로 발급받습니다.
 
 > **답변 음성이 재생되지 않는 경우** — 크롬의 자동 재생 차단 때문입니다.
@@ -92,6 +86,7 @@ Google Gemini 로 바꿨습니다.
 
 | 단계 | 교재 | 이 프로젝트 |
 |---|---|---|
+| 녹음 | `streamlit-audiorecorder` | `st.audio_input` (스트림릿 내장) |
 | STT | OpenAI Whisper (`whisper-1`) | Gemini 오디오 입력 (`gemini-3.6-flash`) |
 | 답변 | `gpt-4` / `gpt-3.5-turbo` | `gemini-3.6-flash` / `gemini-3.5-flash-lite` |
 | TTS | gTTS | gTTS (교재와 동일) |
@@ -107,14 +102,26 @@ Gemini 모델 선택지는 교재가 고성능(`gpt-4`) / 경량(`gpt-3.5-turbo`
 설정으로 받기 때문입니다. 이렇게 하면 화면 표시·초기화 같은 나머지 로직을 교재 코드와
 똑같이 둘 수 있습니다.
 
-### 2. 초기화 버튼을 누르면 이후 녹음이 처리되지 않는 문제
+### 2. 녹음 위젯을 스트림릿 내장 위젯으로 교체
+
+교재가 쓰는 `streamlit-audiorecorder` 는 `pydub` 에 의존하고, `pydub` 은 표준 라이브러리
+`audioop` 을 사용합니다. `audioop` 은 **파이썬 3.13에서 제거**되었기 때문에 최신 파이썬
+환경에서는 `import` 단계에서 바로 실패하고, mp3 변환을 위해 시스템 패키지 `ffmpeg`
+(`packages.txt`)까지 따로 설치해야 합니다.
+
+교재 출간 이후 스트림릿에 녹음 위젯 `st.audio_input` 이 내장되었으므로 이것으로
+바꿨습니다. 그 결과 외부 패키지 `streamlit-audiorecorder` / `pydub`, 시스템 패키지
+`ffmpeg`, 그리고 파이썬 버전 제약이 모두 사라졌습니다. 의존성은 `streamlit`,
+`google-genai`, `gTTS` 세 개뿐이고, 배포할 때 Python 버전을 따로 지정할 필요가 없습니다.
+
+### 3. 초기화 버튼을 누르면 이후 녹음이 처리되지 않는 문제
 
 교재 코드는 `초기화` 버튼을 누를 때 `st.session_state["check_reset"] = True` 로 바꾸지만,
 이 값을 다시 `False` 로 되돌리는 지점이 없습니다. 녹음 처리 조건이
 `check_reset == False` 이므로, 초기화를 한 번 누르면 그 뒤로는 녹음을 해도 아무 반응이
 없습니다. 처리 블록의 `else` 분기에서 플래그를 `False` 로 되돌리도록 했습니다.
 
-### 3. 답변을 `role: "system"` 으로 저장하던 문제
+### 4. 답변을 `role: "system"` 으로 저장하던 문제
 
 교재는 AI의 답변을 `{"role": "system", "content": response}` 로 대화 기록에 넣습니다.
 `system` 은 모델에게 내리는 지시문의 역할이므로, 대화가 길어질수록 답변 하나하나가
@@ -128,13 +135,6 @@ Gemini 모델 선택지는 교재가 고성능(`gpt-4`) / 경량(`gpt-3.5-turbo`
   실제로 필요한 패키지만 버전을 고정해 직접 작성했습니다.
 - API 키가 비어 있는 상태로 녹음하면 호출에서 예외가 발생하며 화면에 스택 트레이스가
   그대로 노출되므로, 안내 메시지를 띄우고 멈추도록 했습니다.
-
-## 주의: 파이썬 버전
-
-녹음 위젯(`streamlit-audiorecorder`)은 `pydub` 에 의존하고, `pydub` 은 표준 라이브러리
-`audioop` 을 사용합니다. **`audioop` 은 파이썬 3.13에서 제거**되었기 때문에 3.13 환경에서는
-`import` 단계에서 실패합니다. 로컬과 배포 모두 **파이썬 3.12** 를 사용해야 합니다.
-(Streamlit Cloud 는 앱 배포 시 `Advanced settings` 에서 Python 버전을 지정합니다.)
 
 ## 배포
 

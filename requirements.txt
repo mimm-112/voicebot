@@ -1,9 +1,3 @@
 streamlit==1.61.1
 google-genai==2.18.0
 gTTS==2.5.4
-streamlit-audiorecorder==0.0.6
-pydub==0.25.1
-# pydub는 표준 라이브러리 audioop을 쓰는데, audioop은 파이썬 3.13에서 제거되었다.
-# Streamlit Cloud에서 Python 3.12를 지정하는 것이 원칙이지만, 혹시 3.13으로
-# 빌드되더라도 죽지 않도록 백포트 패키지를 조건부로 설치한다.
-audioop-lts; python_version >= "3.13"

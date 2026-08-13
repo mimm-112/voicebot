@@ -1,7 +1,5 @@
 ##### 패키지 추가 #####
 import streamlit as st
-# audiorecorder 패키지 추가
-from audiorecorder import audiorecorder
 # Gemini 패키지 추가
 from google import genai
 from google.genai import types
@@ -68,28 +66,20 @@ def to_gemini_contents(messages):
 
 
 def STT(audio, apikey):
-    # 파일 저장
-    filename = "input.mp3"
-    audio.export(filename, format="mp3")
-
-    # 음원 파일을 바이트 형식으로 열기
-    with open(filename, "rb") as audio_file:
-        audio_bytes = audio_file.read()
+    # 녹음된 음원을 바이트 형식으로 읽기
+    audio_bytes = audio.getvalue()
 
     # Gemini에 음원을 그대로 넘겨 텍스트 얻기
     client = genai.Client(api_key=apikey)
     respons = client.models.generate_content(
         model=STT_MODEL,
         contents=[
-            types.Part.from_bytes(data=audio_bytes, mime_type="audio/mp3"),
+            types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
             types.Part.from_text(
                 text="이 음성을 받아쓰기 해주세요. 다른 설명 없이 말한 내용만 그대로 출력하세요."
             ),
         ],
     )
-
-    # 파일 삭제
-    os.remove(filename)
     return respons.text.strip()
 
 
@@ -189,12 +179,9 @@ def main():
     with col1:
         # 왼쪽 영역 작성
         st.subheader("질문하기")
-        # 음성 녹음 아이콘 추가
-        audio = audiorecorder("클릭하여 녹음하기", "녹음 중...")
-        if (audio.duration_seconds > 0) and (st.session_state["check_reset"] == False):
-            # 음성 재생
-            st.audio(audio.export().read())
-
+        # 음성 녹음 (스트림릿 내장 위젯 — 녹음과 재생을 함께 제공한다)
+        audio = st.audio_input("클릭하여 녹음하기")
+        if (audio is not None) and (st.session_state["check_reset"] == False):
             apikey = get_api_key()
             if not apikey:
                 st.error("사이드바에 GEMINI API 키를 입력해 주세요.")
@@ -216,7 +203,7 @@ def main():
     with col2:
         # 오른쪽 영역 작성
         st.subheader("질문/답변")
-        if (audio.duration_seconds > 0) and (st.session_state["check_reset"] == False):
+        if (audio is not None) and (st.session_state["check_reset"] == False):
             # Gemini에게 답변 얻기
             response = ask_gemini(st.session_state["messages"], model, get_api_key())
 
