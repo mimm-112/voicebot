@@ -20,11 +20,134 @@ GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"]
 # 음성을 텍스트로 바꿀 때 사용할 모델
 STT_MODEL = "gemini-3.6-flash"
 
-# 시스템 프롬프트 (교재와 동일)
+# 시스템 프롬프트. 교재의 프롬프트에 자비스 컨셉의 말투 지시를 덧붙였다.
 SYSTEM_PROMPT = {
     "role": "system",
-    "content": "You are a thoughtful assistant. Respond to all input in 25 words and answer in korea",
+    "content": (
+        "You are JARVIS, the AI butler from Iron Man. "
+        "Respond to all input in 25 words and answer in korea. "
+        "사용자를 '보스'라고 부르고, 정중하지만 위트 있는 집사 말투를 사용하세요."
+    ),
 }
+
+
+##### 화면 꾸미기 #####
+# 아이언맨 자비스 컨셉의 스타일. 스트림릿 내부 클래스명은 버전에 따라 바뀔 수 있어서
+# 직접 만든 요소(jv-*)를 중심으로 스타일을 지정했다.
+JARVIS_CSS = """
+<style>
+.stApp {
+    background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,229,255,0.10), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(255,170,0,0.06), transparent 70%),
+        #060A14;
+}
+@keyframes jvPulse {
+    0%, 100% { box-shadow: 0 0 10px #00E5FF, 0 0 26px rgba(0,229,255,.55), inset 0 0 8px rgba(0,229,255,.9); }
+    50%      { box-shadow: 0 0 20px #00E5FF, 0 0 46px rgba(0,229,255,.85), inset 0 0 14px #00E5FF; }
+}
+@keyframes jvBlink { 0%,100% { opacity:1 } 50% { opacity:.25 } }
+
+.jv-head { display:flex; align-items:center; gap:20px; padding:10px 0 4px 0; }
+.jv-reactor {
+    width:52px; height:52px; border-radius:50%; flex:none;
+    background: radial-gradient(circle, #EAFDFF 0%, #7DF4FF 28%, #00B8D4 55%, #062B36 100%);
+    animation: jvPulse 2.4s ease-in-out infinite;
+}
+/* 스트림릿이 마크다운 안의 글자 크기를 자체 규칙으로 덮어쓰기 때문에
+   제목처럼 크기가 중요한 요소에는 !important 를 붙였다. */
+.jv-title {
+    font-size:3rem !important; font-weight:800 !important; letter-spacing:.04em;
+    line-height:1.15 !important; margin:0 !important;
+    color:#EAFDFF; text-shadow: 0 0 14px rgba(0,229,255,.9), 0 0 34px rgba(0,229,255,.5);
+}
+.jv-title .jv-oh { color:#FFC947; text-shadow: 0 0 14px rgba(255,201,71,.9), 0 0 34px rgba(255,170,0,.45); }
+.jv-sub { margin:6px 0 0 0 !important; font-size:.72rem !important; letter-spacing:.28em;
+    color:#5FB6CC; text-transform:uppercase; }
+
+.jv-status { display:flex; gap:18px; flex-wrap:wrap; margin:10px 0 2px 0; font-size:.76rem; letter-spacing:.1em; color:#6FD2E6; }
+.jv-status span { border:1px solid rgba(0,229,255,.28); border-radius:999px; padding:3px 12px; background:rgba(0,229,255,.05); }
+.jv-dot { color:#39FF88; animation: jvBlink 1.8s ease-in-out infinite; }
+
+.jv-rule { height:1px; border:0; margin:14px 0 18px 0;
+    background:linear-gradient(90deg, transparent, rgba(0,229,255,.65), rgba(255,170,0,.35), transparent); }
+
+.jv-panel { border:1px solid rgba(0,229,255,.22); border-left:3px solid #00E5FF; border-radius:8px;
+    background:rgba(0,229,255,.04); padding:14px 18px; margin-bottom:6px; }
+.jv-panel h4 { margin:0 0 8px 0; font-size:.82rem; letter-spacing:.18em; color:#7DF4FF; text-transform:uppercase; }
+.jv-panel ul { margin:0; padding-left:18px; color:#B9DDE9; font-size:.9rem; line-height:1.85; }
+.jv-panel b { color:#FFC947; font-weight:600; }
+
+/* 대화 말풍선 */
+.jv-row { display:flex; align-items:flex-end; gap:8px; margin-bottom:12px; }
+.jv-row.me { justify-content:flex-end; }
+.jv-row.ai { justify-content:flex-start; }
+/* 말풍선 묶음이 남는 가로 공간을 다 차지하지 않도록 내용 크기에 맞춘다.
+   이렇게 해야 시각 표시가 말풍선 바로 옆에 붙는다. */
+.jv-msg { max-width:78%; min-width:0; flex:0 1 auto; }
+.jv-bubble { padding:10px 15px; border-radius:14px; font-size:.94rem; line-height:1.6;
+    word-break:break-word; }
+.jv-row.me .jv-bubble {
+    background:linear-gradient(135deg, rgba(0,229,255,.20), rgba(0,150,190,.14));
+    border:1px solid rgba(0,229,255,.5); color:#EAFDFF; border-bottom-right-radius:4px; }
+.jv-row.ai .jv-bubble {
+    background:linear-gradient(135deg, rgba(255,201,71,.16), rgba(255,140,0,.08));
+    border:1px solid rgba(255,201,71,.45); color:#FFF3D6; border-bottom-left-radius:4px;
+    box-shadow:0 0 16px rgba(255,170,0,.14); }
+.jv-time { font-size:.68rem; color:#4E7C8C; flex:none; padding-bottom:3px; }
+.jv-who { font-size:.66rem; letter-spacing:.16em; margin-bottom:3px; text-transform:uppercase; }
+.jv-row.me .jv-who { color:#5FD8F0; text-align:right; }
+.jv-row.ai .jv-who { color:#FFC947; }
+
+.jv-idle { border:1px dashed rgba(0,229,255,.25); border-radius:10px; padding:26px 18px;
+    text-align:center; color:#4E7C8C; font-size:.86rem; letter-spacing:.08em; }
+</style>
+"""
+
+
+def render_header():
+    """자비스 컨셉의 제목과 상태 표시줄을 그린다."""
+    st.markdown(JARVIS_CSS, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="jv-head">
+            <div class="jv-reactor"></div>
+            <div>
+                <div class="jv-title">🦾 자비스<span class="jv-oh">OHYEAH</span></div>
+                <div class="jv-sub">Just A Rather Very Intelligent System</div>
+            </div>
+        </div>
+        <div class="jv-status">
+            <span><span class="jv-dot">●</span> 시스템 온라인</span>
+            <span>🎙️ 음성 입력 대기</span>
+            <span>⚡ 아크 리액터 정상</span>
+        </div>
+        <hr class="jv-rule">
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_bubble(sender, time, message):
+    """대화 한 줄을 말풍선으로 그린다."""
+    if sender == "user":
+        st.markdown(
+            f'<div class="jv-row me">'
+            f'<div class="jv-time">{time}</div>'
+            f'<div class="jv-msg"><div class="jv-who">보스</div>'
+            f'<div class="jv-bubble">{message}</div></div>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div class="jv-row ai">'
+            f'<div class="jv-msg"><div class="jv-who">🦾 자비스</div>'
+            f'<div class="jv-bubble">{message}</div></div>'
+            f'<div class="jv-time">{time}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
 
 ##### 기능 구현 함수 #####
@@ -117,25 +240,27 @@ def TTS(response):
 ##### 메인 함수 #####
 def main():
     # 기본 설정
-    st.set_page_config(page_title="음성 비서 프로그램", layout="wide")
+    st.set_page_config(page_title="자비스OHYEAH", page_icon="🦾", layout="wide")
 
-    # 제목
-    st.header("음성 비서 프로그램")
-
-    # 구분선
-    st.markdown("---")
+    # 제목과 상태 표시줄
+    render_header()
 
     # 기본 설명
-    with st.expander("음성비서 프로그램에 관하여", expanded=True):
-        st.write(
+    with st.expander("⚙️ 시스템 사양", expanded=True):
+        st.markdown(
             """
-            - 음성비서 프로그램의 UI는 스트림릿을 활용하여 만들었습니다.
-            - STT(Speech-To-Text)는 구글의 Gemini를 활용하였습니다.
-            - 답변은 구글의 Gemini 모델을 활용하였습니다.
-            - TTS(Text-To-Speech)는 구글의 Google Translate TTS를 활용하였습니다.
-            """
+            <div class="jv-panel">
+                <h4>System Specification</h4>
+                <ul>
+                    <li>인터페이스는 <b>스트림릿</b>으로 구축하였습니다.</li>
+                    <li>음성 인식(STT)은 구글의 <b>Gemini</b>를 활용하였습니다.</li>
+                    <li>답변 생성은 구글의 <b>Gemini</b> 모델을 활용하였습니다.</li>
+                    <li>음성 합성(TTS)은 구글의 <b>Google Translate TTS</b>를 활용하였습니다.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        st.markdown("")
 
     # session state 초기화
     if "chat" not in st.session_state:
@@ -152,9 +277,12 @@ def main():
 
     # 사이드바 생성
     with st.sidebar:
+        st.markdown(JARVIS_CSS, unsafe_allow_html=True)
+        st.markdown("### ⚙️ 제어판")
+
         # Gemini API 키 입력받기
         st.session_state["GOOGLE_API"] = st.text_input(
-            label="GEMINI API 키",
+            label="🔑 인증 키",
             placeholder="Enter Your API Key",
             value="",
             type="password",
@@ -163,12 +291,12 @@ def main():
         st.markdown("---")
 
         # Gemini 모델을 선택하기 위한 라디오 버튼 생성
-        model = st.radio(label="GEMINI 모델", options=GEMINI_MODELS)
+        model = st.radio(label="🧠 코어 모델", options=GEMINI_MODELS)
 
         st.markdown("---")
 
         # 리셋 버튼 생성
-        if st.button(label="초기화"):
+        if st.button(label="🔄 기억 초기화", use_container_width=True):
             # 리셋 코드
             st.session_state["chat"] = []
             st.session_state["messages"] = [SYSTEM_PROMPT]
@@ -178,13 +306,13 @@ def main():
     col1, col2 = st.columns(2)
     with col1:
         # 왼쪽 영역 작성
-        st.subheader("질문하기")
+        st.subheader("🎙️ 음성 명령")
         # 음성 녹음 (스트림릿 내장 위젯 — 녹음과 재생을 함께 제공한다)
-        audio = st.audio_input("클릭하여 녹음하기")
+        audio = st.audio_input("마이크를 눌러 말씀하세요, 보스")
         if (audio is not None) and (st.session_state["check_reset"] == False):
             apikey = get_api_key()
             if not apikey:
-                st.error("사이드바에 GEMINI API 키를 입력해 주세요.")
+                st.error("🔑 인증 키가 없습니다, 보스. 왼쪽 제어판에 키를 입력해 주세요.")
                 st.stop()
 
             # 음원 파일에서 텍스트 추출
@@ -202,7 +330,7 @@ def main():
 
     with col2:
         # 오른쪽 영역 작성
-        st.subheader("질문/답변")
+        st.subheader("💬 교신 기록")
         if (audio is not None) and (st.session_state["check_reset"] == False):
             # Gemini에게 답변 얻기
             response = ask_gemini(st.session_state["messages"], model, get_api_key())
@@ -222,22 +350,7 @@ def main():
 
             # 채팅 형식으로 시각화하기
             for sender, time, message in st.session_state["chat"]:
-                if sender == "user":
-                    st.write(
-                        f'<div style="display:flex;align-items:center;">'
-                        f'<div style="background-color:#007AFF;color:white;border-radius:12px;padding:8px 12px;margin-right:8px;">{message}</div>'
-                        f'<div style="font-size:0.8rem;color:gray;">{time}</div></div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.write("")
-                else:
-                    st.write(
-                        f'<div style="display:flex;align-items:center;justify-content:flex-end;">'
-                        f'<div style="background-color:lightgray;border-radius:12px;padding:8px 12px;margin-left:8px;">{message}</div>'
-                        f'<div style="font-size:0.8rem;color:gray;">{time}</div></div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.write("")
+                render_bubble(sender, time, message)
 
             # gTTS를 활용하여 음성 파일 생성 및 재생
             TTS(response)
@@ -246,6 +359,13 @@ def main():
             # 교재 코드에는 check_reset을 False로 되돌리는 지점이 없어서
             # 초기화를 한 번 누르면 이후 녹음이 영영 처리되지 않는다.
             st.session_state["check_reset"] = False
+
+            # 아직 대화가 없을 때 보여줄 안내
+            st.markdown(
+                '<div class="jv-idle">🦾 대기 중입니다, 보스.<br>'
+                "왼쪽 마이크를 눌러 말을 걸어 주세요.</div>",
+                unsafe_allow_html=True,
+            )
 
 
 if __name__ == "__main__":
