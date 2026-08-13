@@ -36,22 +36,25 @@ SYSTEM_PROMPT = {
 # 직접 만든 요소(jv-*)를 중심으로 스타일을 지정했다.
 JARVIS_CSS = """
 <style>
+/* 밝은 바탕에 맞춘 색. 어두운 화면은 분위기는 좋지만 오래 보기 피로하고
+   회색 글씨의 대비가 낮아진다. 배경을 밝히고 글자색을 진하게 잡아
+   본문 대비를 충분히 확보했다. */
 .stApp {
     background:
-        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,229,255,0.10), transparent 70%),
-        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(255,170,0,0.06), transparent 70%),
-        #060A14;
+        radial-gradient(ellipse 80% 45% at 50% 0%, rgba(0,150,200,0.10), transparent 70%),
+        radial-gradient(ellipse 55% 40% at 95% 100%, rgba(230,150,0,0.07), transparent 70%),
+        #F5F9FC;
 }
+/* 아크 리액터는 스스로 빛나는 물체이므로 밝은 바탕에서도 그대로 살린다. */
 @keyframes jvPulse {
-    0%, 100% { box-shadow: 0 0 10px #00E5FF, 0 0 26px rgba(0,229,255,.55), inset 0 0 8px rgba(0,229,255,.9); }
-    50%      { box-shadow: 0 0 20px #00E5FF, 0 0 46px rgba(0,229,255,.85), inset 0 0 14px #00E5FF; }
+    0%, 100% { box-shadow: 0 0 10px rgba(0,180,220,.75), 0 0 24px rgba(0,180,220,.35); }
+    50%      { box-shadow: 0 0 18px rgba(0,180,220,.95), 0 0 42px rgba(0,180,220,.5); }
 }
-@keyframes jvBlink { 0%,100% { opacity:1 } 50% { opacity:.25 } }
 
 .jv-head { display:flex; align-items:center; gap:20px; padding:10px 0 4px 0; }
 .jv-reactor {
     width:52px; height:52px; border-radius:50%; flex:none;
-    background: radial-gradient(circle, #EAFDFF 0%, #7DF4FF 28%, #00B8D4 55%, #062B36 100%);
+    background: radial-gradient(circle, #FFFFFF 0%, #9BEEFF 30%, #00A6CC 62%, #016C88 100%);
     animation: jvPulse 2.4s ease-in-out infinite;
 }
 /* 스트림릿이 마크다운 안의 글자 크기를 자체 규칙으로 덮어쓰기 때문에
@@ -59,26 +62,23 @@ JARVIS_CSS = """
 .jv-title {
     font-size:3rem !important; font-weight:800 !important; letter-spacing:.04em;
     line-height:1.15 !important; margin:0 !important;
-    color:#EAFDFF; text-shadow: 0 0 14px rgba(0,229,255,.9), 0 0 34px rgba(0,229,255,.5);
+    color:#0C3D52; text-shadow: 0 2px 10px rgba(0,150,190,.35), 0 0 2px rgba(0,150,190,.4);
 }
-.jv-title .jv-oh { color:#FFC947; text-shadow: 0 0 14px rgba(255,201,71,.9), 0 0 34px rgba(255,170,0,.45); }
-.jv-sub { margin:6px 0 0 0 !important; font-size:.72rem !important; letter-spacing:.28em;
-    color:#5FB6CC; text-transform:uppercase; }
+.jv-title .jv-oh { color:#D98A00; text-shadow: 0 2px 10px rgba(217,138,0,.35), 0 0 2px rgba(217,138,0,.45); }
+.jv-sub { margin:6px 0 0 0 !important; font-size:.74rem !important; letter-spacing:.28em;
+    color:#3E7A92; text-transform:uppercase; }
 
-.jv-status { display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 2px 0; font-size:.76rem; letter-spacing:.1em; color:#6FD2E6; }
-.jv-status span { border:1px solid rgba(0,229,255,.28); border-radius:999px; padding:3px 12px; background:rgba(0,229,255,.05); }
-.jv-status span.ok   { border-color:rgba(57,255,136,.45); background:rgba(57,255,136,.06); color:#8CFFC0; }
-.jv-status span.warn { border-color:rgba(255,201,71,.5);  background:rgba(255,201,71,.07); color:#FFC947; }
-.jv-dot { animation: jvBlink 1.8s ease-in-out infinite; }
+.jv-status { display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 2px 0; font-size:.82rem; letter-spacing:.06em; }
+.jv-status span { border:1px solid rgba(0,150,190,.35); border-radius:999px; padding:4px 14px;
+    background:#FFFFFF; color:#0F5A73; box-shadow:0 1px 3px rgba(10,60,80,.07); }
 
-.jv-rule { height:1px; border:0; margin:14px 0 18px 0;
-    background:linear-gradient(90deg, transparent, rgba(0,229,255,.65), rgba(255,170,0,.35), transparent); }
+.jv-rule { height:2px; border:0; margin:14px 0 18px 0;
+    background:linear-gradient(90deg, transparent, rgba(0,150,190,.5), rgba(217,138,0,.35), transparent); }
 
-.jv-panel { border:1px solid rgba(0,229,255,.22); border-left:3px solid #00E5FF; border-radius:8px;
-    background:rgba(0,229,255,.04); padding:14px 18px; margin-bottom:6px; }
-.jv-panel h4 { margin:0 0 8px 0; font-size:.82rem; letter-spacing:.18em; color:#7DF4FF; text-transform:uppercase; }
-.jv-panel ul { margin:0; padding-left:18px; color:#B9DDE9; font-size:.9rem; line-height:1.85; }
-.jv-panel b { color:#FFC947; font-weight:600; }
+.jv-panel { border:1px solid rgba(0,150,190,.25); border-left:4px solid #00A6CC; border-radius:8px;
+    background:#FFFFFF; padding:16px 20px; margin-bottom:6px; box-shadow:0 1px 4px rgba(10,60,80,.06); }
+.jv-panel ul { margin:0; padding-left:18px; color:#22485C; font-size:.96rem; line-height:1.9; }
+.jv-panel b { color:#B06E00; font-weight:700; }
 
 /* 대화 말풍선 */
 .jv-row { display:flex; align-items:flex-end; gap:8px; margin-bottom:12px; }
@@ -87,39 +87,30 @@ JARVIS_CSS = """
 /* 말풍선 묶음이 남는 가로 공간을 다 차지하지 않도록 내용 크기에 맞춘다.
    이렇게 해야 시각 표시가 말풍선 바로 옆에 붙는다. */
 .jv-msg { max-width:78%; min-width:0; flex:0 1 auto; }
-.jv-bubble { padding:10px 15px; border-radius:14px; font-size:.94rem; line-height:1.6;
-    word-break:break-word; }
+.jv-bubble { padding:11px 16px; border-radius:14px; font-size:1rem; line-height:1.65;
+    word-break:break-word; box-shadow:0 1px 4px rgba(10,60,80,.08); }
 .jv-row.me .jv-bubble {
-    background:linear-gradient(135deg, rgba(0,229,255,.20), rgba(0,150,190,.14));
-    border:1px solid rgba(0,229,255,.5); color:#EAFDFF; border-bottom-right-radius:4px; }
+    background:#DFF4FB; border:1px solid #7FCBE3; color:#0B3D51; border-bottom-right-radius:4px; }
 .jv-row.ai .jv-bubble {
-    background:linear-gradient(135deg, rgba(255,201,71,.16), rgba(255,140,0,.08));
-    border:1px solid rgba(255,201,71,.45); color:#FFF3D6; border-bottom-left-radius:4px;
-    box-shadow:0 0 16px rgba(255,170,0,.14); }
-.jv-time { font-size:.68rem; color:#4E7C8C; flex:none; padding-bottom:3px; }
-.jv-who { font-size:.66rem; letter-spacing:.16em; margin-bottom:3px; text-transform:uppercase; }
-.jv-row.me .jv-who { color:#5FD8F0; text-align:right; }
-.jv-row.ai .jv-who { color:#FFC947; }
+    background:#FFF6E3; border:1px solid #E8C173; color:#4A3208; border-bottom-left-radius:4px; }
+.jv-time { font-size:.74rem; color:#5D7C8A; flex:none; padding-bottom:3px; }
+.jv-who { font-size:.72rem; letter-spacing:.12em; margin-bottom:3px; font-weight:600; }
+.jv-row.me .jv-who { color:#0F6E8C; text-align:right; }
+.jv-row.ai .jv-who { color:#A9700A; }
 
-.jv-idle { border:1px dashed rgba(0,229,255,.25); border-radius:10px; padding:26px 18px;
-    text-align:center; color:#4E7C8C; font-size:.86rem; letter-spacing:.08em; }
+.jv-idle { border:2px dashed rgba(0,150,190,.3); border-radius:10px; padding:28px 18px;
+    text-align:center; color:#3F6B7D; font-size:.95rem; letter-spacing:.04em; background:#FBFDFE; }
 </style>
 """
 
 
-def render_header(api_ok, model, turns):
+def render_header(model, turns):
     """자비스 컨셉의 제목과 상태 표시줄을 그린다.
 
-    상태 표시줄에는 실제 세션 값(키 인증 여부, 선택한 모델, 지금까지의 대화 횟수)을
-    보여준다. 값을 인자로 받기 때문에 화면에 보이는 내용과 실제 상태가 어긋나지 않는다.
+    상태 표시줄에는 실제 세션 값(선택한 모델, 지금까지의 대화 횟수)을 보여준다.
+    값을 인자로 받기 때문에 화면에 보이는 내용과 실제 상태가 어긋나지 않는다.
     """
     st.markdown(JARVIS_CSS, unsafe_allow_html=True)
-
-    if api_ok:
-        auth = '<span class="ok"><span class="jv-dot">●</span> 인증 완료</span>'
-    else:
-        auth = '<span class="warn">○ 인증 키 필요</span>'
-
     st.markdown(
         f"""
         <div class="jv-head">
@@ -130,7 +121,6 @@ def render_header(api_ok, model, turns):
             </div>
         </div>
         <div class="jv-status">
-            {auth}
             <span>🧠 {model}</span>
             <span>💬 대화 {turns}턴</span>
         </div>
@@ -291,7 +281,6 @@ def main():
 
     # 제목과 상태 표시줄 (실제 세션 값을 그대로 표시한다)
     render_header(
-        api_ok=bool(get_api_key()),
         model=st.session_state["model"],
         turns=len([c for c in st.session_state["chat"] if c[0] == "user"]),
     )
